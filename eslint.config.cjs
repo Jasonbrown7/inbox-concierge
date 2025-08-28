@@ -20,6 +20,7 @@ module.exports = tseslint.config(
         project: [
           './apps/api/tsconfig.json',
           './apps/web/tsconfig.json',
+          './packages/shared/tsconfig.json'
         ],
         tsconfigRootDir: __dirname,
       },
@@ -32,6 +33,9 @@ module.exports = tseslint.config(
     languageOptions: {
       globals: { ...globals.node },
     },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
   },
   {
     files: ['apps/web/**/*.{ts,tsx,js}'],
@@ -40,4 +44,21 @@ module.exports = tseslint.config(
     },
   },
   prettier,
+  // TODO: add prettier rules
+  {
+    rules: {
+      // '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
+    },
+  },
+  
+  // Rules for CJS configuration files
+  {
+    files: ['*.cjs'],
+    languageOptions: {
+      globals: { ...globals.node },
+    },
+    rules: {
+      '@typescript-eslint/no-require-imports': 'off',
+    },
+  },
 );

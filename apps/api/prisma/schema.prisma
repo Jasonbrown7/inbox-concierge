@@ -1,0 +1,32 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  googleId     String?  @unique
+  refreshToken String?
+  createdAt    DateTime @default(now())
+  threads      Thread[]
+}
+
+model Thread {
+  id           String   @id
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  subject      String?
+  snippet      String?
+  fromAddress  String?
+  fromDomain   String?
+  internalDate DateTime?
+  gmailLabels  Json?
+  bucket       String   @default("uncategorized")
+  score        Float?
+  updatedAt    DateTime @updatedAt
+}

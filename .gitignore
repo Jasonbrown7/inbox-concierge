@@ -23,6 +23,7 @@ pnpm-debug.log*
 .vscode
 .idea
 .DS_Store
+.eslintcache
 
 # Prisma (SQLite db created inside apps/api/prisma)
 apps/api/prisma/dev.db
