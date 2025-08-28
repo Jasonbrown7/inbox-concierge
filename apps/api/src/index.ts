@@ -10,8 +10,21 @@ import { authRouter } from './routes/auth.js'
 const app = express()
 const port = process.env.PORT || 4000
 
-// CORS first to handle pre-flight requests
-app.use(cors({ origin: 'http://localhost:5173', credentials: true }))
+const allowedOrigins = new Set([
+  'http://localhost:5173',
+  'http://127.0.0.1:5173',
+])
+
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // allow same-origin (no origin) and allowed dev frontends
+      if (!origin || allowedOrigins.has(origin)) return cb(null, true)
+      return cb(new Error('Not allowed by CORS'))
+    },
+    credentials: true,
+  })
+)
 
 // Health check before any auth middleware
 app.use('/api/health', healthRouter)

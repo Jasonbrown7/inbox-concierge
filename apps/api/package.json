@@ -7,7 +7,11 @@
   "scripts": {
     "dev": "tsx watch --env-file .env src/index.ts",
     "build": "tsc",
-    "start": "dotenv node dist/index.js"
+    "start": "dotenv node dist/index.js", 
+    "prisma": "prisma",
+    "prisma:deploy": "prisma migrate deploy",
+    "prisma:status": "prisma migrate status",
+    "prisma:dev": "prisma migrate dev"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
@@ -16,6 +20,7 @@
     "dotenv": "^17.2.1",
     "express": "^5.1.0",
     "express-session": "^1.18.2",
+    "googleapis": "^159.0.0",
     "passport": "^0.7.0",
     "passport-google-oauth20": "^2.0.0",
     "zod": "^4.1.4"

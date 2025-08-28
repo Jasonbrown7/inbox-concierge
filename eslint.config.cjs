@@ -2,6 +2,7 @@ const js = require('@eslint/js');
 const tseslint = require('typescript-eslint');
 const prettier = require('eslint-config-prettier');
 const globals = require('globals');
+const reactRefresh = require('eslint-plugin-react-refresh');
 
 module.exports = tseslint.config(
   {
@@ -14,27 +15,27 @@ module.exports = tseslint.config(
   ...tseslint.configs.recommended,
 
   {
-    files: ['apps/**/*.{ts,tsx}', 'packages/**/*.{ts,tsx}'],
+    files: ['**/*.{ts,tsx}'],
     languageOptions: {
       parserOptions: {
-        project: [
-          './apps/api/tsconfig.json',
-          './apps/web/tsconfig.json',
-          './packages/shared/tsconfig.json'
-        ],
+        project: ['./tsconfig.eslint.json'],
         tsconfigRootDir: __dirname,
       },
     },
     rules: {}
   },
+  
+  {
+    files: ['apps/web/src/components/ui/**/*.{ts,tsx,js}'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 
   {
-    files: ['apps/api/**/*.{ts,tsx,js}', '*.cjs'],
+    files: ['apps/api/**/*.{ts,tsx,js}', '*.cjs', 'apps/**/*.cjs'],
     languageOptions: {
       globals: { ...globals.node },
-    },
-    rules: {
-      '@typescript-eslint/no-require-imports': 'off',
     },
   },
   {
@@ -42,23 +43,24 @@ module.exports = tseslint.config(
     languageOptions: {
       globals: { ...globals.browser },
     },
+    plugins: {
+      'react-refresh': reactRefresh,
+    },
+    rules: {
+      'react-refresh/only-export-components': [
+        'warn',
+        { allowConstantExport: true },
+      ],
+    },
   },
   prettier,
-  // TODO: add prettier rules
-  {
-    rules: {
-      // '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }],
-    },
-  },
-  
+
   // Rules for CJS configuration files
   {
-    files: ['*.cjs'],
-    languageOptions: {
-      globals: { ...globals.node },
-    },
+    files: ['*.cjs', 'apps/**/*.cjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
+      '@typescript-eslint/no-empty-interface': 'off'
     },
   },
 );
