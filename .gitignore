@@ -1,0 +1,29 @@
+# Dependencies
+node_modules
+.pnpm-store
+
+# Build artifacts
+dist
+.next
+out
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Environment variables
+.env
+.env*.local
+
+# IDE & OS files
+.vscode
+.idea
+.DS_Store
+
+# Prisma (SQLite db created inside apps/api/prisma)
+apps/api/prisma/dev.db
+apps/api/prisma/dev.db-journal
