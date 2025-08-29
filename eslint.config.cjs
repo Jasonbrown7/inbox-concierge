@@ -1,16 +1,21 @@
-const js = require('@eslint/js');
-const tseslint = require('typescript-eslint');
-const prettier = require('eslint-config-prettier');
-const globals = require('globals');
-const reactRefresh = require('eslint-plugin-react-refresh');
+const js = require('@eslint/js')
+const tseslint = require('typescript-eslint')
+const prettier = require('eslint-config-prettier')
+const globals = require('globals')
+const reactRefresh = require('eslint-plugin-react-refresh')
 
 module.exports = tseslint.config(
   {
     ignores: [
-      'node_modules', 'dist', 'build', 'apps/api/prisma/dev.db', 'apps/api/prisma/dev.db-journal', 'scratch.ts'
+      'node_modules',
+      'dist',
+      'build',
+      'apps/api/prisma/dev.db',
+      'apps/api/prisma/dev.db-journal',
+      'scratch.ts',
     ],
   },
-  
+
   js.configs.recommended,
   ...tseslint.configs.recommended,
 
@@ -22,9 +27,9 @@ module.exports = tseslint.config(
         tsconfigRootDir: __dirname,
       },
     },
-    rules: {}
+    rules: {},
   },
-  
+
   {
     files: ['apps/web/src/components/ui/**/*.{ts,tsx,js}'],
     rules: {
@@ -60,7 +65,7 @@ module.exports = tseslint.config(
     files: ['*.cjs', 'apps/**/*.cjs'],
     rules: {
       '@typescript-eslint/no-require-imports': 'off',
-      '@typescript-eslint/no-empty-interface': 'off'
+      '@typescript-eslint/no-empty-interface': 'off',
     },
-  },
-);
+  }
+)

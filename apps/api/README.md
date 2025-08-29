@@ -53,6 +53,10 @@ Handles the fetching, syncing, and retrieval of email threads.
   - **Description**: Retrieves a list of email threads for the authenticated user that have already been synced and stored in the local database.
   - **Authentication**: Required (cookie-based session).
 
+- **`GET /threads/:id`**
+  - **Description**: Fetches the full content of a single email thread, including all message bodies, directly from the Gmail API. It processes the complex API response and returns a simplified data structure to the frontend.
+  - **Authentication**: Required (cookie-based session).
+
 - **`POST /sync`**
   - **Description**: Triggers a sync process with the Gmail API. It identifies the most recent thread stored locally and fetches only newer threads from Gmail. The fetched thread metadata is then saved (`upserted`) into the database.
   - **Authentication**: Required (cookie-based session).

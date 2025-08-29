@@ -1,5 +1,5 @@
 import { Router, RequestHandler } from 'express'
-import { google } from 'googleapis'
+import { google, gmail_v1 } from 'googleapis'
 import { decrypt } from '../services/encryption.service.js'
 import { GmailService } from '../services/gmail.service.js'
 import { prisma } from '../lib/prisma.js'
@@ -14,7 +14,7 @@ const isAuthenticated: RequestHandler = (req, res, next) => {
 
 // List threads from database
 threadsRouter.get('/', isAuthenticated, async (req, res) => {
-  const user = req.user as { id: string }
+  const user = req.user!
   // Fetch user's threads, ordered by most recent
   const threads = await prisma.thread.findMany({
     where: { userId: user.id },
@@ -24,11 +24,83 @@ threadsRouter.get('/', isAuthenticated, async (req, res) => {
   res.json(threads)
 })
 
+// Recursively find the HTML part of a message payload
+function findHtmlPart(
+  parts: gmail_v1.Schema$MessagePart[]
+): gmail_v1.Schema$MessagePart | null {
+  for (const part of parts) {
+    if (part.mimeType === 'text/html' && part.body?.data) {
+      return part
+    }
+    if (part.parts) {
+      const found = findHtmlPart(part.parts)
+      if (found) return found
+    }
+  }
+  return null
+}
+
+// Get a single full thread from Gmail API
+threadsRouter.get('/:id', isAuthenticated, async (req, res) => {
+  try {
+    const user = req.user!
+    if (!user?.refreshToken)
+      return res.status(400).json({ message: 'No refresh token on user.' })
+
+    // Set up OAuth2 client
+    const oauth2 = new google.auth.OAuth2(
+      process.env.GOOGLE_CLIENT_ID,
+      process.env.GOOGLE_CLIENT_SECRET
+    )
+    oauth2.setCredentials({ refresh_token: decrypt(user.refreshToken) })
+
+    // Fetch full thread data
+    const gmail = new GmailService(oauth2)
+    const thread = await gmail.getFullThread(req.params.id)
+
+    if (!thread || !thread.messages) {
+      return res.status(404).json({ message: 'Thread not found' })
+    }
+
+    // Process messages to simplify for the frontend
+    const simplifiedMessages = thread.messages.map((message) => {
+      const headers = message.payload?.headers || []
+      const getHeader = (name: string) =>
+        headers.find((h) => h.name?.toLowerCase() === name.toLowerCase())
+          ?.value || ''
+
+      let bodyData = ''
+      if (message.payload?.mimeType === 'text/html') {
+        bodyData = message.payload.body?.data || ''
+      } else if (message.payload?.parts) {
+        const htmlPart = findHtmlPart(message.payload.parts)
+        bodyData = htmlPart?.body?.data || ''
+      }
+
+      return {
+        id: message.id,
+        from: getHeader('from'),
+        date: getHeader('date'),
+        subject: getHeader('subject'),
+        bodyData,
+      }
+    })
+
+    // Simplified response for the frontend
+    res.json({
+      id: thread.id,
+      messages: simplifiedMessages,
+    })
+  } catch (err) {
+    console.error('Failed to fetch full thread:', err)
+    res.status(500).json({ message: 'Failed to fetch full thread' })
+  }
+})
+
 // Sync threads from Gmail to database
 threadsRouter.post('/sync', isAuthenticated, async (req, res) => {
   try {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any -- TODO: Remove any type. Replace with User type stores in express.d.ts
-    const user = req.user as any
+    const user = req.user!
     if (!user?.refreshToken)
       return res.status(400).json({ message: 'No refresh token on user.' })
 
@@ -41,7 +113,7 @@ threadsRouter.post('/sync', isAuthenticated, async (req, res) => {
       ? Math.floor(new Date(last.internalDate!).getTime() / 1000) + 1
       : undefined
 
-    // Set up OAuth2 client with user's refresh token
+    // Set up OAuth2 client
     const oauth2 = new google.auth.OAuth2(
       process.env.GOOGLE_CLIENT_ID,
       process.env.GOOGLE_CLIENT_SECRET

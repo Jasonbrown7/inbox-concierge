@@ -1,69 +1,39 @@
-# React + TypeScript + Vite
+# Inbox Concierge Web
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This directory contains the frontend web application for Inbox Concierge. It is a modern single-page application built with React (Vite) and TypeScript.
 
-Currently, two official plugins are available:
+## Core Technologies & Libraries
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+- **React**: The primary UI library for building components.
+- **Vite**: A fast and modern build tool and development server.
+- **TypeScript**: Provides static typing for the entire codebase.
+- **React Router**: Handles all client-side routing and navigation.
+- **TanStack Query (React Query)**: Manages all server state, including data fetching, caching, and synchronization. It is used for fetching user authentication status and email threads.
+- **Axios**: Used for all HTTP communication with the backend API. A pre-configured instance ensures credentials are sent with every request.
+- **Tailwind CSS**: A utility-first CSS framework for styling.
+- **shadcn/ui**: A collection of accessible and reusable components built on top of Tailwind CSS.
 
-## Expanding the ESLint configuration
+## Project Structure
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+- **`src/pages`**: Contains the main page components that are mapped to routes.
+  - `LoginPage.tsx`: The view shown to unauthenticated users.
+  - `InboxPage.tsx`: The main inbox view that lists email threads.
+  - `ThreadPage.tsx`: The detailed view for a single email thread.
+- **`src/components`**: Contains reusable components.
+  - `ui/`: Holds the components added from `shadcn/ui`.
+  - `InboxPageSkeleton.tsx` / `ThreadPageSkeleton.tsx`: Custom skeleton components that provide a polished loading state for their respective pages.
+- **`src/hooks`**: Contains custom React hooks.
+  - `useUser.ts`: A hook to fetch and cache the current user's authentication status.
+- **`src/lib`**: Contains library configurations and utilities.
+  - `axios.ts`: A pre-configured Axios instance for API calls.
 
-```js
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## Design & Data Flow
 
-      // Remove tseslint.configs.recommended and replace with this
-      ...tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      ...tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      ...tseslint.configs.stylisticTypeChecked,
+### Authentication
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+The application uses an `AuthHandler` in `App.tsx` which acts as a gatekeeper. It uses the `useUser` hook to determine if a user is logged in. If they are, it renders the application's content via a React Router `<Outlet />`; otherwise, it displays the `LoginPage`.
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+### Data Fetching
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default tseslint.config([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+- **Inbox View**: On load, `InboxPage.tsx` automatically triggers a sync with the Gmail API via a POST request to `/api/threads/sync`. It then fetches the list of thread metadata from the backend's `GET /api/threads` endpoint.
+- **Thread View**: When a user clicks on a thread, they are navigated to `/thread/:id`. The `ThreadPage.tsx` component then makes an on-demand request to `GET /api/threads/:id` to fetch the full content for that specific thread. This "lazy-loading" approach is highly efficient.

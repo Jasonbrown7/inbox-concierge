@@ -1,8 +1,10 @@
+import { useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { api } from '@/lib/axios'
 import { Button } from '@/components/ui/button'
-// import { ThreadSkeletons } from '@/components/ThreadSkeletons'
+import { InboxPageSkeleton } from '@/components/InboxPageSkeleton'
 import { RefreshCw } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 interface Thread {
   id: string
@@ -18,7 +20,6 @@ export function InboxPage() {
   const { data: threads, isLoading } = useQuery<Thread[]>({
     queryKey: ['threads'],
     queryFn: async () => (await api.get('/threads')).data,
-    // For now, the initial sync is triggered manually by the user
     refetchOnWindowFocus: false,
   })
 
@@ -35,6 +36,13 @@ export function InboxPage() {
       console.error('Sync failed:', error)
     },
   })
+
+  useEffect(() => {
+    // Sync on initial mount
+    if (!threads) {
+      syncMutation.mutate()
+    }
+  }, [threads, syncMutation])
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return ''
@@ -67,7 +75,7 @@ export function InboxPage() {
       </header>
 
       <main>
-        {/* {isLoading && <ThreadSkeletons />} */}
+        {isLoading && <InboxPageSkeleton />}
 
         {!isLoading && threads?.length === 0 && (
           <div className="text-center py-12">
@@ -81,30 +89,36 @@ export function InboxPage() {
         {!isLoading && threads && threads.length > 0 && (
           <div className="space-y-2">
             {threads.map((thread) => (
-              <div
+              <Link
+                to={`/thread/${thread.id}`}
                 key={thread.id}
-                className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer flex items-start sm:items-center"
+                className="block"
               >
-                <div className="flex-grow truncate flex items-center gap-4">
-                  <div className="font-semibold text-sm w-32 sm:w-48 truncate hidden sm:block">
-                    {thread.fromAddress?.split('<')[0].trim().replace(/"/g, '')}
-                  </div>
-                  <div className="flex-grow truncate">
-                    <p className="font-medium text-sm truncate">
-                      {thread.subject}
-                    </p>
-                    <p className="text-xs text-muted-foreground truncate sm:hidden">
+                <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer flex items-start sm:items-center">
+                  <div className="flex-grow truncate flex items-center gap-4">
+                    <div className="font-semibold text-sm w-32 sm:w-48 truncate hidden sm:block">
                       {thread.fromAddress
                         ?.split('<')[0]
                         .trim()
                         .replace(/"/g, '')}
-                    </p>
+                    </div>
+                    <div className="flex-grow truncate">
+                      <p className="font-medium text-sm truncate">
+                        {thread.subject}
+                      </p>
+                      <p className="text-xs text-muted-foreground truncate sm:hidden">
+                        {thread.fromAddress
+                          ?.split('<')[0]
+                          .trim()
+                          .replace(/"/g, '')}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">
+                    {formatDate(thread.internalDate)}
                   </div>
                 </div>
-                <div className="text-xs text-muted-foreground ml-4 flex-shrink-0">
-                  {formatDate(thread.internalDate)}
-                </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

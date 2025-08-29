@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
+import { Outlet } from 'react-router-dom'
 import { useUser } from './hooks/useUser'
 import { LoginPage } from './pages/LoginPage'
-import { InboxPage } from './pages/InboxPage'
+// import { InboxPage } from './pages/InboxPage'
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -26,7 +27,7 @@ function AuthHandler() {
       </div>
     )
   }
-  return user ? <InboxPage /> : <LoginPage />
+  return user ? <Outlet /> : <LoginPage />
 }
 
 export default App

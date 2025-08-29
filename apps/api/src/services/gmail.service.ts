@@ -35,6 +35,16 @@ export class GmailService {
     })
   }
 
+  // Fetch a single thread with full content
+  public async getFullThread(id: string) {
+    const { data } = await this.gmail.users.threads.get({
+      userId: 'me',
+      id,
+      format: 'full',
+    })
+    return data
+  }
+
   // Process items concurrently with a specified limit to avoid rate limiting
   private async mapWithConcurrency<T, R>(
     items: T[],
