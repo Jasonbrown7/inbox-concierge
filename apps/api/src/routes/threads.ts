@@ -16,8 +16,13 @@ const isAuthenticated: RequestHandler = (req, res, next) => {
 threadsRouter.get('/', isAuthenticated, async (req, res) => {
   const user = req.user!
   // Fetch user's threads, ordered by most recent
+  const { bucket } = req.query
+  const where = {
+    userId: user.id,
+    ...(bucket ? { bucket: String(bucket) } : {}),
+  }
   const threads = await prisma.thread.findMany({
-    where: { userId: user.id },
+    where,
     orderBy: { internalDate: 'desc' },
     take: 200,
   })
@@ -156,7 +161,10 @@ threadsRouter.post('/sync', isAuthenticated, async (req, res) => {
         const internalDate = msg?.internalDate
           ? new Date(Number(msg.internalDate))
           : null
-        const labels = (msg?.labelIds ?? []).join(',')
+
+        // Extract headers relevant for classification
+        const listUnsubscribe = getHeader(headers, 'List-Unsubscribe')
+        const precedence = getHeader(headers, 'Precedence')
 
         // Upsert thread to database
         await prisma.thread.upsert({
@@ -167,7 +175,10 @@ threadsRouter.post('/sync', isAuthenticated, async (req, res) => {
             fromAddress: from,
             fromDomain: domainFrom(from),
             internalDate,
-            gmailLabels: labels,
+            headers: {
+              ...(listUnsubscribe && { listUnsubscribe: true }),
+              ...(precedence && { precedence }),
+            },
           },
           create: {
             id: t.id!,
@@ -177,7 +188,10 @@ threadsRouter.post('/sync', isAuthenticated, async (req, res) => {
             fromAddress: from,
             fromDomain: domainFrom(from),
             internalDate,
-            gmailLabels: labels,
+            headers: {
+              ...(listUnsubscribe && { listUnsubscribe: true }),
+              ...(precedence && { precedence }),
+            },
           },
         })
       }

@@ -11,6 +11,25 @@ The `GmailService` class is responsible for all communication with the Google Gm
 - **`constructor(oauthClient)`**: Initializes the service with a user-authenticated Google OAuth2 client.
 - **`fetchLatestThreads(options)`**: Fetches email thread metadata from the Gmail API. It retrieves a list of thread IDs and then fetches the details for each thread concurrently to improve performance. It supports an `after` option to fetch only threads newer than a given timestamp.
 
+### `services/classification.service.ts`
+
+This service orchestrates the entire AI-powered email classification pipeline. It uses a multi-pass strategy to categorize threads efficiently and accurately.
+
+- **`classifyLastN(userId, n)`**: The main entry point for the classification process. It fetches the last `n` threads for a user and passes them through the following stages:
+  1.  **Rules Engine**: Applies user-defined rules for deterministic categorization.
+  2.  **Heuristics**: Uses fast, pattern-based checks to identify common email types (e.g., newsletters, receipts).
+  3.  **LLM Classification**: Sends any remaining, unclassified threads to an LLM (e.g., GPT-4.1-nano) for nuanced categorization.
+
+### `services/llm.service.ts`
+
+This service is responsible for all communication with the OpenAI API.
+
+- **`classifyWithLlm(threads)`**: Takes a batch of email threads, formats them into a compact shape for the model, sends them to the OpenAI API with a specialized prompt, and validates the returned JSON classification data using a Zod schema.
+
+### `services/rules.service.ts` & `services/heuristics.service.ts`
+
+These services contain the logic for the first two passes of the classification pipeline. They apply deterministic rules and pattern-matching to quickly classify common email types without needing to call the LLM.
+
 ### `services/encryption.service.ts`
 
 This service provides utility functions for encryption and decryption using `aes-256-gcm`. It is used to securely store sensitive data, like user refresh tokens, in the database.
@@ -60,6 +79,20 @@ Handles the fetching, syncing, and retrieval of email threads.
 - **`POST /sync`**
   - **Description**: Triggers a sync process with the Gmail API. It identifies the most recent thread stored locally and fetches only newer threads from Gmail. The fetched thread metadata is then saved (`upserted`) into the database.
   - **Authentication**: Required (cookie-based session).
+
+### Buckets (`/buckets`)
+
+- **`GET /`**: Retrieves the list of default and user-created buckets.
+
+### Rules (`/rules`)
+
+- **`GET /`**: Retrieves the list of user-defined classification rules.
+- **`POST /`**: Creates a new classification rule.
+- **`DELETE /:id`**: Deletes a specific rule.
+
+### Classification (`/classify`)
+
+- **`POST /run`**: Triggers the AI classification pipeline for the user's most recent threads.
 
 ## Database Migrations
 

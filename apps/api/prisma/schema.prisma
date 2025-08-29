@@ -7,6 +7,20 @@ generator client {
   provider = "prisma-client-js"
 }
 
+enum RuleType {
+  FROM_EQUALS
+  FROM_DOMAIN
+  SUBJECT_CONTAINS
+  HAS_LIST_UNSUBSCRIBE
+}
+
+enum ClassificationSource {
+  rule
+  heuristic
+  llm
+  fallback
+}
+
 model User {
   id           String   @id @default(cuid())
   email        String   @unique
@@ -14,19 +28,64 @@ model User {
   refreshToken String?
   createdAt    DateTime @default(now())
   threads      Thread[]
+  buckets      Bucket[]
+  rules        Rule[]
+}
+
+model Bucket {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name       String
+  slug       String
+  isDefault  Boolean  @default(false)
+  color      String?
+  sortOrder  Int?     @default(0)
+  createdAt  DateTime @default(now())
+  rules      Rule[]
+  // index for quick lookups
+  @@index([userId, slug])
+  @@unique([userId, slug])
+}
+
+model Rule {
+  id         String   @id @default(cuid())
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bucketId   String
+  bucket     Bucket   @relation(fields: [bucketId], references: [id], onDelete: Cascade)
+  type       RuleType
+  pattern    String
+  priority   Int      @default(100)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId, priority])
 }
 
 model Thread {
   id           String   @id
   userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
   subject      String?
   snippet      String?
   fromAddress  String?
   fromDomain   String?
   internalDate DateTime?
-  gmailLabels  Json?
+
+  // store selected headers minimally; SQLite supports Json
+  headers      Json?
+
+  // classification
   bucket       String   @default("uncategorized")
-  score        Float?
+  classificationSource ClassificationSource?
+  classificationScore  Float?
+  classificationReason String?
+  classifiedAt  DateTime?
+
   updatedAt    DateTime @updatedAt
+
+  @@index([userId, bucket])
+  @@index([userId, internalDate])
 }

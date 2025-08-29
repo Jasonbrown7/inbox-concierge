@@ -7,6 +7,9 @@ import passport from './lib/passport.js'
 import { healthRouter } from './routes/health.js'
 import { authRouter } from './routes/auth.js'
 import { threadsRouter } from './routes/threads.js'
+import { bucketsRouter } from './routes/buckets.js'
+import { rulesRouter } from './routes/rules.js'
+import { classifyRouter } from './routes/classify.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -51,6 +54,9 @@ app.use(passport.session())
 
 app.use('/api/auth', authRouter)
 app.use('/api/threads', threadsRouter)
+app.use('/api/buckets', bucketsRouter)
+app.use('/api/rules', rulesRouter)
+app.use('/api/classify', classifyRouter)
 
 app.listen(port, () => {
   console.log(`API server listening on http://localhost:${port}`)
