@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser'
 import passport from './lib/passport.js'
 import { healthRouter } from './routes/health.js'
 import { authRouter } from './routes/auth.js'
+import { threadsRouter } from './routes/threads.js'
 
 const app = express()
 const port = process.env.PORT || 4000
@@ -49,6 +50,7 @@ app.use(passport.initialize())
 app.use(passport.session())
 
 app.use('/api/auth', authRouter)
+app.use('/api/threads', threadsRouter)
 
 app.listen(port, () => {
   console.log(`API server listening on http://localhost:${port}`)
