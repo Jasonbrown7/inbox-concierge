@@ -1,16 +1,11 @@
-import { Router, RequestHandler } from 'express'
+import { Router } from 'express'
 import { google, gmail_v1 } from 'googleapis'
 import { decrypt } from '../services/encryption.service.js'
 import { GmailService } from '../services/gmail.service.js'
 import { prisma } from '../lib/prisma.js'
+import { isAuthenticated } from '../middleware/auth.js'
 
 export const threadsRouter = Router()
-
-// Middleware to check if user is authenticated
-const isAuthenticated: RequestHandler = (req, res, next) => {
-  if (req.isAuthenticated && req.isAuthenticated()) return next()
-  return res.status(401).json({ message: 'User not authenticated' })
-}
 
 // List threads from database
 threadsRouter.get('/', isAuthenticated, async (req, res) => {

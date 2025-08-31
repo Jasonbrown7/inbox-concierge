@@ -13,22 +13,21 @@ The `GmailService` class is responsible for all communication with the Google Gm
 
 ### `services/classification.service.ts`
 
-This service orchestrates the entire AI-powered email classification pipeline. It uses a multi-pass strategy to categorize threads efficiently and accurately.
+This service orchestrates the entire AI-powered email classification pipeline. It uses a two-phase process to categorize threads efficiently and accurately.
 
-- **`classifyLastN(userId, n)`**: The main entry point for the classification process. It fetches the last `n` threads for a user and passes them through the following stages:
-  1.  **Rules Engine**: Applies user-defined rules for deterministic categorization.
-  2.  **Heuristics**: Uses fast, pattern-based checks to identify common email types (e.g., newsletters, receipts).
-  3.  **LLM Classification**: Sends any remaining, unclassified threads to an LLM (e.g., GPT-4.1-nano) for nuanced categorization.
+- **`classifyLastN(userId, n)`**: The main entry point for the classification process. It runs in two phases:
+  1.  **Phase 1 (New Threads):** Fetches only new, uncategorized threads and classifies them using a fast heuristics pass, followed by an LLM pass for any remaining ambiguous emails.
+  2.  **Phase 2 (Rules Override):** Fetches all `n` recent threads (regardless of current bucket) and runs a "rules-only" pass. This ensures that any user-defined rules are always applied as the final override.
 
 ### `services/llm.service.ts`
 
-This service is responsible for all communication with the OpenAI API.
+This service is responsible for all communication with the OpenAI API. It uses the **Structured Outputs** feature to guarantee that the LLM's response adheres to a strict Zod schema.
 
 - **`classifyWithLlm(threads)`**: Takes a batch of email threads, formats them into a compact shape for the model, sends them to the OpenAI API with a specialized prompt, and validates the returned JSON classification data using a Zod schema.
 
 ### `services/rules.service.ts` & `services/heuristics.service.ts`
 
-These services contain the logic for the first two passes of the classification pipeline. They apply deterministic rules and pattern-matching to quickly classify common email types without needing to call the LLM.
+These services contain the logic for the deterministic passes of the classification pipeline. They apply user-defined rules and pattern-matching to quickly classify common email types.
 
 ### `services/encryption.service.ts`
 

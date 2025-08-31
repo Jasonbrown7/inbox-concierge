@@ -1,59 +1,29 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { fetchBuckets, fetchThreads, runClassify } from '@/lib/api'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { useState, useMemo, useEffect, useRef } from 'react'
 import { RuleDialog } from '@/components/RuleDialog'
 import { InboxPageSkeleton } from '@/components/InboxPageSkeleton'
-import { api } from '@/lib/axios'
-import { Link } from 'react-router-dom'
+import { useInbox } from '@/hooks/useInbox'
+import { ThreadList } from '@/components/ThreadList'
+import { useState, useMemo, useEffect, useRef } from 'react'
 
 export function InboxPage() {
-  const qc = useQueryClient()
-  const [active, setActive] = useState<string>('All')
+  const [activeTab, setActiveTab] = useState<string>('All')
   const [isWorking, setIsWorking] = useState(false)
   const initialLoadRef = useRef(false)
 
-  const { data: buckets } = useQuery({
-    queryKey: ['buckets'],
-    queryFn: fetchBuckets,
-  })
+  const {
+    bucketsQuery,
+    threadsQuery,
+    allThreadsQuery,
+    classifyMutation,
+    syncMutation,
+    invalidateRules,
+    invalidateThreads,
+  } = useInbox(activeTab)
 
-  // For displaying threads
-  const { data: threads, isLoading } = useQuery({
-    queryKey: ['threads', active],
-    queryFn: () =>
-      active === 'All' ? fetchThreads() : fetchThreads({ bucket: active }),
-  })
-
-  // ONLY for calculating the counts
-  const { data: allThreads } = useQuery({
-    queryKey: ['threads', 'all'],
-    queryFn: () => fetchThreads(),
-  })
-
-  const classifyMutation = useMutation({
-    mutationFn: () => runClassify(200),
-    onSuccess: () => {
-      // After classifying, invalidate to refetch fresh data
-      qc.invalidateQueries({ queryKey: ['threads'] })
-      setIsWorking(false)
-    },
-    onError: () => setIsWorking(false),
-  })
-
-  const syncMutation = useMutation({
-    mutationFn: () => api.post('/threads/sync'),
-    onSuccess: (data) => {
-      console.log('Sync complete, now classifying.', data)
-      classifyMutation.mutate()
-    },
-    onError: (error) => {
-      console.error('Sync failed:', error)
-      setIsWorking(false)
-    },
-  })
+  const { data: buckets } = bucketsQuery
+  const { data: threads, isLoading } = threadsQuery
+  const { data: allThreads } = allThreadsQuery
 
   useEffect(() => {
     if (!initialLoadRef.current) {
@@ -63,7 +33,13 @@ export function InboxPage() {
         syncMutation.mutate()
       }
     }
-  }, [threads, syncMutation, classifyMutation])
+  }, [threads, syncMutation])
+
+  useEffect(() => {
+    if (!classifyMutation.isPending && !syncMutation.isPending) {
+      setIsWorking(false)
+    }
+  }, [classifyMutation.isPending, syncMutation.isPending])
 
   const counts = useMemo(() => {
     const all = allThreads || []
@@ -82,6 +58,16 @@ export function InboxPage() {
       ? 'Syncing...'
       : 'Classifying...'
 
+  const handleReclassify = () => {
+    setIsWorking(true)
+    classifyMutation.mutate()
+  }
+
+  const handleRuleChange = () => {
+    invalidateRules()
+    invalidateThreads()
+  }
+
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
       <header className="flex justify-between items-center mb-6 pb-4 border-b">
@@ -89,26 +75,15 @@ export function InboxPage() {
           TENEX Inbox Concierge
         </h1>
         <div className="flex gap-2">
-          <RuleDialog
-            onCreated={() => {
-              qc.invalidateQueries({ queryKey: ['rules'] })
-              qc.invalidateQueries({ queryKey: ['threads'] })
-            }}
-          />
-          <Button
-            onClick={() => {
-              setIsWorking(true)
-              classifyMutation.mutate()
-            }}
-            disabled={isWorking}
-          >
+          <RuleDialog onCreated={handleRuleChange} />
+          <Button onClick={handleReclassify} disabled={isWorking}>
             {buttonText}
           </Button>
         </div>
       </header>
 
       <main>
-        <Tabs value={active} onValueChange={setActive}>
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="flex flex-wrap h-auto">
             <TabsTrigger value="All">
               All <TabCount n={counts['All']} />
@@ -120,7 +95,7 @@ export function InboxPage() {
             ))}
           </TabsList>
 
-          <TabsContent value={active} className="mt-4">
+          <TabsContent value={activeTab} className="mt-4">
             {isLoading && <InboxPageSkeleton />}
 
             {!isLoading && threads?.length === 0 && (
@@ -133,37 +108,7 @@ export function InboxPage() {
             )}
 
             {!isLoading && threads && threads.length > 0 && (
-              <div className="space-y-2">
-                {(threads || []).map((t) => (
-                  <Link to={`/thread/${t.id}`} key={t.id} className="block">
-                    <div className="border rounded-lg p-3 sm:p-4 hover:bg-muted/50 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between gap-4">
-                        <div className="font-medium text-sm truncate min-w-0">
-                          {t.subject || '(no subject)'}
-                        </div>
-                        <div className="flex gap-2 items-center flex-shrink-0">
-                          {t.classificationSource && (
-                            <Badge variant="outline">
-                              {t.classificationSource}
-                            </Badge>
-                          )}
-                          {t.bucket && <Badge>{t.bucket}</Badge>}
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <div className="text-sm text-muted-foreground truncate">
-                          {t.fromAddress}
-                        </div>
-                        {t.classificationReason && (
-                          <div className="text-xs text-muted-foreground mt-1 italic">
-                            {t.classificationReason}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+              <ThreadList threads={threads} />
             )}
           </TabsContent>
         </Tabs>

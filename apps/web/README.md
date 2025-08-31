@@ -22,10 +22,14 @@ This directory contains the frontend web application for Inbox Concierge. It is 
 - **`src/components`**: Contains reusable components.
   - `ui/`: Holds the components added from `shadcn/ui`.
   - `InboxPageSkeleton.tsx` / `ThreadPageSkeleton.tsx`: Custom skeleton components that provide a polished loading state for their respective pages.
+  - `RuleDialog.tsx`: A dialog component for creating, viewing, and deleting classification rules.
+  - `ThreadList.tsx`: A presentational component responsible for rendering the list of email threads.
 - **`src/hooks`**: Contains custom React hooks.
   - `useUser.ts`: A hook to fetch and cache the current user's authentication status.
+  - `useInbox.ts`: A custom hook that encapsulates all data-fetching and mutation logic for the inbox page.
 - **`src/lib`**: Contains library configurations and utilities.
   - `axios.ts`: A pre-configured Axios instance for API calls.
+  - `api.ts`: Centralizes all client-side API fetching functions.
 
 ## Design & Data Flow
 
@@ -33,7 +37,9 @@ This directory contains the frontend web application for Inbox Concierge. It is 
 
 The application uses an `AuthHandler` in `App.tsx` which acts as a gatekeeper. It uses the `useUser` hook to determine if a user is logged in. If they are, it renders the application's content via a React Router `<Outlet />`; otherwise, it displays the `LoginPage`.
 
-### Data Fetching
+### Data Fetching & UI Logic
 
-- **Inbox View**: On load, `InboxPage.tsx` automatically triggers a sync with the Gmail API via a POST request to `/api/threads/sync`. It then fetches the list of thread metadata from the backend's `GET /api/threads` endpoint.
-- **Thread View**: When a user clicks on a thread, they are navigated to `/thread/:id`. The `ThreadPage.tsx` component then makes an on-demand request to `GET /api/threads/:id` to fetch the full content for that specific thread. This "lazy-loading" approach is highly efficient.
+- **Logic Encapsulation**: The `InboxPage`'s complex logic is encapsulated in the `useInbox` custom hook. This hook handles all data fetching (for buckets and threads), mutations (for syncing and classifying), and returns the necessary data and state to the component.
+- **Initial Load**: On the initial load of the `InboxPage`, the application automatically triggers a sync with the Gmail API, followed immediately by the classification pipeline.
+- **UI**: The page uses a tabbed interface to filter threads by their assigned bucket. A "Reclassify" button allows the user to re-run the classification process, and an "Add rule" button opens a dialog for managing classification rules.
+- **Thread View**: When a user clicks on a thread, they are navigated to `/thread/:id`. The `ThreadPage.tsx` component then makes an on-demand request to `GET /api/threads/:id` to fetch the full content for that specific thread.

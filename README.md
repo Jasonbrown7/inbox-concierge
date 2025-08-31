@@ -31,6 +31,14 @@ The application employs a hybrid approach to data management to ensure a fast us
 - **What is Stored**: The database only stores lightweight metadata for email threads (e.g., thread ID, subject, sender, snippet, date). The full body content of emails is never stored locally.
 - **Synchronization**: A dedicated `/api/threads/sync` endpoint intelligently fetches this metadata from the Gmail API. On the first run, it fetches the user's most recent threads. On subsequent runs, it only fetches threads that are newer than the last one stored, minimizing redundant API calls.
 
+### AI Classification Pipeline
+
+On initial load, the application automatically syncs the user's latest email metadata from Gmail. Immediately following the sync, a multi-stage classification pipeline runs on the backend:
+
+1.  **Heuristics:** Fast, deterministic checks identify common email types like newsletters and transactional messages.
+2.  **LLM Classification:** Any remaining uncategorized emails are sent in batches to a Large Language Model (e.g., GPT-4o-mini) for nuanced classification into buckets like "Important" or "Can wait".
+3.  **Rules Engine:** After classification, a "rules override" pass is performed. This pass applies any user-created rules (e.g., "emails from `domain.com` are always Important"), ensuring user preferences are the final word. This entire process is triggered on load and can be manually re-run by the user.
+
 ### Backend & Frontend Interaction
 
 The frontend and backend communicate via a RESTful API.

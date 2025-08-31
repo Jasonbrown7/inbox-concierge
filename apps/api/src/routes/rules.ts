@@ -1,13 +1,9 @@
-import { Router, RequestHandler } from 'express'
+import { Router } from 'express'
 import { prisma } from '../lib/prisma.js'
 import { z } from 'zod'
+import { isAuthenticated } from '../middleware/auth.js'
 
 export const rulesRouter = Router()
-
-const isAuthed: RequestHandler = (req, res, next) =>
-  req.isAuthenticated()
-    ? next()
-    : res.status(401).json({ message: 'Not authenticated' })
 
 const CreateRule = z.object({
   bucketId: z.string(),
@@ -21,7 +17,7 @@ const CreateRule = z.object({
   priority: z.number().int().min(0).max(1000).default(100),
 })
 
-rulesRouter.get('/', isAuthed, async (req, res) => {
+rulesRouter.get('/', isAuthenticated, async (req, res) => {
   const rules = await prisma.rule.findMany({
     where: { userId: req.user!.id },
     include: { bucket: true },
@@ -30,7 +26,7 @@ rulesRouter.get('/', isAuthed, async (req, res) => {
   res.json(rules)
 })
 
-rulesRouter.post('/', isAuthed, async (req, res) => {
+rulesRouter.post('/', isAuthenticated, async (req, res) => {
   const parsed = CreateRule.safeParse(req.body)
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.message })
@@ -47,7 +43,7 @@ rulesRouter.post('/', isAuthed, async (req, res) => {
   res.status(201).json(rule)
 })
 
-rulesRouter.delete('/:id', isAuthed, async (req, res) => {
+rulesRouter.delete('/:id', isAuthenticated, async (req, res) => {
   await prisma.rule.delete({
     where: { id: req.params.id, userId: req.user!.id },
   })
