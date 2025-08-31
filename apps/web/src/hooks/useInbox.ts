@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchBuckets, fetchThreads, runClassify } from '@/lib/api'
 import { api } from '@/lib/axios'
+import { toast } from 'sonner'
 
 export function useInbox(activeTab: string) {
   const qc = useQueryClient()
@@ -27,8 +28,16 @@ export function useInbox(activeTab: string) {
   // Mutations
   const classifyMutation = useMutation({
     mutationFn: () => runClassify(200),
-    onSuccess: () => {
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ['threads'] })
+      toast.success('Inbox classified', {
+        description: `Processed ${data.totalUncategorized} new threads.`,
+      })
+    },
+    onError: () => {
+      toast.error('Classification failed', {
+        description: 'Something went wrong while classifying your inbox.',
+      })
     },
   })
 
@@ -36,7 +45,14 @@ export function useInbox(activeTab: string) {
     mutationFn: () => api.post('/threads/sync'),
     onSuccess: (data) => {
       console.log('Sync complete, now classifying.', data)
+      toast.info('Sync complete, now classifying...')
       classifyMutation.mutate()
+    },
+    onError: (error) => {
+      console.error('Sync failed:', error)
+      toast.error('Sync failed', {
+        description: 'Could not sync with your Gmail account.',
+      })
     },
   })
 

@@ -20,6 +20,7 @@ import {
 import { createRule, deleteRule, fetchBuckets, fetchRules } from '@/lib/api'
 import { Separator } from './ui/separator'
 import { X } from 'lucide-react'
+import { toast } from 'sonner'
 
 type Rule = {
   id: string
@@ -50,6 +51,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
     onSuccess: () => {
       setPattern('')
       qc.invalidateQueries({ queryKey: ['rules'] })
+      toast.success('Rule created successfully.')
       onCreated?.()
     },
   })
@@ -58,6 +60,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
     mutationFn: (id: string) => deleteRule(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rules'] })
+      toast.success('Rule deleted successfully.')
       onCreated?.()
     },
   })
