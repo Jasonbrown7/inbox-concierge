@@ -11,6 +11,16 @@ The monorepo contains two primary applications:
 - `apps/api`: A Node.js/Express backend that handles business logic, data persistence, and communication with the Google Gmail API.
 - `apps/web`: A React/Vite frontend that provides the user interface.
 
+## Screenshots
+
+|                                       Login Page                                        |                                       Inbox Page                                        |
+| :-------------------------------------------------------------------------------------: | :-------------------------------------------------------------------------------------: |
+| <img src="./apps/web/public/screenshots/login-page.png" alt="Login Page" width="400" /> | <img src="./apps/web/public/screenshots/inbox-page.png" alt="Inbox Page" width="400" /> |
+
+|                                        Thread Page                                        |                                         Manage Buckets                                          |                                        Manage Rules                                         |
+| :---------------------------------------------------------------------------------------: | :---------------------------------------------------------------------------------------------: | :-----------------------------------------------------------------------------------------: |
+| <img src="./apps/web/public/screenshots/thread-page.png" alt="Thread Page" width="400" /> | <img src="./apps/web/public/screenshots/manage-buckets.png" alt="Manage Buckets" width="400" /> | <img src="./apps/web/public/screenshots/manage-rules.png" alt="Manage Rules" width="400" /> |
+
 ## Documentation
 
 - **[Backend Documentation](./apps/api/README.md)**
