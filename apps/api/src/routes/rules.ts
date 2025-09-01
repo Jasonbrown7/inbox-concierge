@@ -5,6 +5,13 @@ import { isAuthenticated } from '../middleware/auth.js'
 
 export const rulesRouter = Router()
 
+const BUCKET_PRIORITY_MAP: Record<string, number> = {
+  important: 10,
+  'can-wait': 50,
+  newsletter: 100,
+  'auto-archive': 200,
+}
+
 const CreateRule = z.object({
   bucketId: z.string(),
   type: z.enum([
@@ -14,7 +21,7 @@ const CreateRule = z.object({
     'HAS_LIST_UNSUBSCRIBE',
   ]),
   pattern: z.string().min(1),
-  priority: z.number().int().min(0).max(1000).default(100),
+  isHighPriority: z.boolean().optional().default(false),
 })
 
 rulesRouter.get('/', isAuthenticated, async (req, res) => {
@@ -31,13 +38,28 @@ rulesRouter.post('/', isAuthenticated, async (req, res) => {
   if (!parsed.success)
     return res.status(400).json({ error: parsed.error.message })
 
+  const { bucketId, type, pattern, isHighPriority } = parsed.data
+
+  // Determine priority
+  let priority = 100 // Default priority
+  if (isHighPriority) {
+    priority = 1
+  } else {
+    const bucket = await prisma.bucket.findUnique({
+      where: { id: bucketId, userId: req.user!.id },
+    })
+    if (bucket && BUCKET_PRIORITY_MAP[bucket.slug]) {
+      priority = BUCKET_PRIORITY_MAP[bucket.slug]
+    }
+  }
+
   const rule = await prisma.rule.create({
     data: {
       userId: req.user!.id,
-      bucketId: parsed.data.bucketId,
-      type: parsed.data.type,
-      pattern: parsed.data.pattern,
-      priority: parsed.data.priority,
+      bucketId,
+      type,
+      pattern,
+      priority,
     },
   })
   res.status(201).json(rule)

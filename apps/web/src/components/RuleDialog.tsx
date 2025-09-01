@@ -21,11 +21,13 @@ import { createRule, deleteRule, fetchBuckets, fetchRules } from '@/lib/api'
 import { Separator } from './ui/separator'
 import { X } from 'lucide-react'
 import { toast } from 'sonner'
+import { Checkbox } from './ui/checkbox'
 
 type Rule = {
   id: string
   type: string
   pattern: string
+  priority: number
   bucket: { name: string }
 }
 
@@ -44,12 +46,14 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
     'FROM_EQUALS' | 'FROM_DOMAIN' | 'SUBJECT_CONTAINS' | 'HAS_LIST_UNSUBSCRIBE'
   >('FROM_DOMAIN')
   const [pattern, setPattern] = useState('')
+  const [isHighPriority, setIsHighPriority] = useState(false)
   const [open, setOpen] = useState(false)
 
   const createMutation = useMutation({
-    mutationFn: () => createRule({ bucketId, type, pattern }),
+    mutationFn: () => createRule({ bucketId, type, pattern, isHighPriority }),
     onSuccess: () => {
       setPattern('')
+      setIsHighPriority(false)
       qc.invalidateQueries({ queryKey: ['rules'] })
       toast.success('Rule created successfully.')
       onCreated?.()
@@ -68,7 +72,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline">Add rule</Button>
+        <Button variant="outline">Manage Rules</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -128,6 +132,20 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
               placeholder="e.g. stripe.com"
             />
           </div>
+
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="high-priority"
+              checked={isHighPriority}
+              onCheckedChange={(checked) => setIsHighPriority(!!checked)}
+            />
+            <Label
+              htmlFor="high-priority"
+              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+            >
+              Make this a high-priority rule (overrides other rules)
+            </Label>
+          </div>
         </div>
 
         <div className="flex justify-end gap-2">
@@ -162,6 +180,11 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
                 className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50"
               >
                 <div>
+                  {rule.priority === 1 && (
+                    <span className="font-bold text-yellow-500 mr-2">
+                      [High Priority]
+                    </span>
+                  )}
                   <span className="font-mono bg-white/50 px-1 py-0.5 rounded text-xs">
                     {rule.type}
                   </span>

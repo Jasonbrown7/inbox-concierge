@@ -85,8 +85,10 @@ Handles the fetching, syncing, and retrieval of email threads.
 
 ### Rules (`/rules`)
 
+Handles the creation and management of user-defined classification rules.
+
 - **`GET /`**: Retrieves the list of user-defined classification rules.
-- **`POST /`**: Creates a new classification rule.
+- **`POST /`**: Creates a new classification rule. Priority is assigned automatically based on the target bucket, with an option for a manual high-priority override.
 - **`DELETE /:id`**: Deletes a specific rule.
 
 ### Classification (`/classify`)

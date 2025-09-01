@@ -23,7 +23,7 @@ export async function createRule(payload: {
     | 'SUBJECT_CONTAINS'
     | 'HAS_LIST_UNSUBSCRIBE'
   pattern: string
-  priority?: number
+  isHighPriority?: boolean
 }) {
   const { data } = await api.post('/rules', payload)
   return data

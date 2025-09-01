@@ -13,8 +13,11 @@ export function applyRules(thread: Thread, rules: Rule[]): RuleHit | null {
   ).toLowerCase()
   const headers = (thread.headers as Prisma.JsonObject) || {}
 
+  // Sort by priority (lower number = higher priority)
+  const sortedRules = [...rules].sort((a, b) => a.priority - b.priority)
+
   // rules are expected pre-sorted by priority ASC (lower number = higher priority)
-  for (const r of rules) {
+  for (const r of sortedRules) {
     const pat = r.pattern.toLowerCase()
     switch (r.type) {
       case 'FROM_EQUALS':
