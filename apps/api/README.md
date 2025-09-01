@@ -15,15 +15,13 @@ The `GmailService` class is responsible for all communication with the Google Gm
 
 This service orchestrates the entire AI-powered email classification pipeline. It uses a two-phase process to categorize threads efficiently and accurately.
 
-- **`classifyLastN(userId, n)`**: The main entry point for the classification process. It runs in two phases:
-  1.  **Phase 1 (New Threads):** Fetches only new, uncategorized threads and classifies them using a fast heuristics pass, followed by an LLM pass for any remaining ambiguous emails.
-  2.  **Phase 2 (Rules Override):** Fetches all `n` recent threads (regardless of current bucket) and runs a "rules-only" pass. This ensures that any user-defined rules are always applied as the final override.
+- **`classifyLastN(userId, n, force)`**: The main entry point for the classification process. It supports a `force` flag to reset the classification of all recent threads, ensuring they are re-evaluated by the full pipeline. The service also resets the classification of specific threads when a relevant bucket or rule is deleted.
 
 ### `services/llm.service.ts`
 
 This service is responsible for all communication with the OpenAI API. It uses the **Structured Outputs** feature to guarantee that the LLM's response adheres to a strict Zod schema.
 
-- **`classifyWithLlm(threads)`**: Takes a batch of email threads, formats them into a compact shape for the model, sends them to the OpenAI API with a specialized prompt, and validates the returned JSON classification data using a Zod schema.
+- **`classifyWithLlm(threads, buckets)`**: Takes a batch of email threads and a user's full list of buckets. It dynamically generates a prompt and a validation schema to allow the LLM to classify threads into the user's custom-defined buckets.
 
 ### `services/rules.service.ts` & `services/heuristics.service.ts`
 
@@ -82,6 +80,8 @@ Handles the fetching, syncing, and retrieval of email threads.
 ### Buckets (`/buckets`)
 
 - **`GET /`**: Retrieves the list of default and user-created buckets.
+- **`POST /`**: Creates a new, custom bucket for the user.
+- **`DELETE /:id`**: Deletes a user-created bucket. Before deleting, it intelligently finds and resets the classification of any threads currently in that bucket. Default buckets cannot be deleted.
 
 ### Rules (`/rules`)
 
@@ -89,11 +89,11 @@ Handles the creation and management of user-defined classification rules.
 
 - **`GET /`**: Retrieves the list of user-defined classification rules.
 - **`POST /`**: Creates a new classification rule. Priority is assigned automatically based on the target bucket, with an option for a manual high-priority override.
-- **`DELETE /:id`**: Deletes a specific rule.
+- **`DELETE /:id`**: Deletes a specific rule. Before deleting, it intelligently finds and resets the classification of any threads that were categorized by that specific rule.
 
 ### Classification (`/classify`)
 
-- **`POST /run`**: Triggers the AI classification pipeline for the user's most recent threads.
+- **`POST /run`**: Triggers the AI classification pipeline for the user's most recent threads. Supports a `force=true` query parameter to perform a "deep" re-classification.
 
 ## Database Migrations
 

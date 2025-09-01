@@ -1,45 +1,66 @@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Button } from '@/components/ui/button'
 import { RuleDialog } from '@/components/RuleDialog'
+import { ManageBucketsDialog } from '@/components/ManageBucketsDialog'
 import { InboxPageSkeleton } from '@/components/InboxPageSkeleton'
 import { useInbox } from '@/hooks/useInbox'
 import { ThreadList } from '@/components/ThreadList'
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { toast } from 'sonner'
+
+type SyncStep = 'idle' | 'syncing' | 'classifying'
 
 export function InboxPage() {
   const [activeTab, setActiveTab] = useState<string>('All')
-  const [isWorking, setIsWorking] = useState(false)
+  const [syncStep, setSyncStep] = useState<SyncStep>('idle')
   const initialLoadRef = useRef(false)
 
   const {
     bucketsQuery,
-    threadsQuery,
     allThreadsQuery,
     classifyMutation,
     syncMutation,
     invalidateRules,
     invalidateThreads,
-  } = useInbox(activeTab)
+    invalidateBuckets,
+  } = useInbox()
 
   const { data: buckets } = bucketsQuery
-  const { data: threads, isLoading } = threadsQuery
-  const { data: allThreads } = allThreadsQuery
+  const { data: allThreads, isLoading } = allThreadsQuery
+
+  const handleSync = useCallback(() => {
+    const promise = async () => {
+      setSyncStep('syncing')
+      await syncMutation.mutateAsync()
+      setSyncStep('classifying')
+      const data = await classifyMutation.mutateAsync({})
+      setSyncStep('idle')
+      return data
+    }
+
+    toast.promise(promise(), {
+      loading: 'Syncing and classifying new emails...',
+      success: (data) =>
+        `Sync complete. Classified ${data.totalUncategorized} new threads.`,
+      error: () => {
+        setSyncStep('idle') // Reset state on error
+        return 'Sync failed. Please try again.'
+      },
+    })
+  }, [syncMutation, classifyMutation])
 
   useEffect(() => {
     if (!initialLoadRef.current) {
       initialLoadRef.current = true
-      if (!threads) {
-        setIsWorking(true)
-        syncMutation.mutate()
-      }
+      handleSync()
     }
-  }, [threads, syncMutation])
+  }, [handleSync])
 
-  useEffect(() => {
-    if (!classifyMutation.isPending && !syncMutation.isPending) {
-      setIsWorking(false)
-    }
-  }, [classifyMutation.isPending, syncMutation.isPending])
+  const threads = useMemo(() => {
+    if (!allThreads) return []
+    if (activeTab === 'All') return allThreads
+    return allThreads.filter((t) => t.bucket === activeTab)
+  }, [allThreads, activeTab])
 
   const counts = useMemo(() => {
     const all = allThreads || []
@@ -52,20 +73,38 @@ export function InboxPage() {
     return base
   }, [allThreads, buckets])
 
-  const buttonText = !isWorking
-    ? 'Reclassify'
-    : syncMutation.isPending
-      ? 'Syncing...'
-      : 'Classifying...'
+  const isProcessing = syncStep !== 'idle'
 
-  const handleReclassify = () => {
-    setIsWorking(true)
-    classifyMutation.mutate()
+  const handleReclassify = (force = false) => {
+    const promise = classifyMutation.mutateAsync({ force })
+    toast.promise(promise, {
+      loading: 'Running classification pipeline...',
+      success: (data) =>
+        `Classification complete. Processed ${data.totalUncategorized} new threads.`,
+      error: 'Classification failed. Please try again.',
+    })
   }
 
-  const handleRuleChange = () => {
+  const handleRuleCreated = () => {
     invalidateRules()
     invalidateThreads()
+    handleReclassify(true) // force re-classify after creating a rule
+  }
+
+  const handleRuleDeleted = () => {
+    invalidateRules()
+    invalidateThreads()
+    handleReclassify(false) // standard re-classify after deleting a rule
+  }
+
+  const handleBucketCreated = () => {
+    invalidateBuckets()
+    handleReclassify(true) // force re-classify after creating a bucket
+  }
+
+  const handleBucketDeleted = () => {
+    invalidateBuckets()
+    handleReclassify(false) // standard re-classify after deleting a bucket
   }
 
   return (
@@ -75,9 +114,21 @@ export function InboxPage() {
           TENEX Inbox Concierge
         </h1>
         <div className="flex gap-2">
-          <RuleDialog onCreated={handleRuleChange} />
-          <Button onClick={handleReclassify} disabled={isWorking}>
-            {buttonText}
+          <RuleDialog
+            buckets={buckets || []}
+            onCreated={handleRuleCreated}
+            onDeleted={handleRuleDeleted}
+          />
+          <ManageBucketsDialog
+            onCreated={handleBucketCreated}
+            onDeleted={handleBucketDeleted}
+          />
+          <Button onClick={handleSync} disabled={isProcessing}>
+            {syncStep === 'syncing'
+              ? 'Syncing...'
+              : syncStep === 'classifying'
+                ? 'Classifying...'
+                : 'Sync'}
           </Button>
         </div>
       </header>
@@ -96,7 +147,7 @@ export function InboxPage() {
           </TabsList>
 
           <TabsContent value={activeTab} className="mt-4">
-            {isLoading && <InboxPageSkeleton />}
+            {isLoading && !isProcessing && <InboxPageSkeleton />}
 
             {!isLoading && threads?.length === 0 && (
               <div className="text-center py-12">

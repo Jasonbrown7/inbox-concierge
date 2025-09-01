@@ -17,9 +17,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
-import { createRule, deleteRule, fetchBuckets, fetchRules } from '@/lib/api'
+import { createRule, deleteRule, fetchRules } from '@/lib/api'
 import { Separator } from './ui/separator'
-import { X } from 'lucide-react'
+import { Trash2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Checkbox } from './ui/checkbox'
 
@@ -31,12 +31,14 @@ type Rule = {
   bucket: { name: string }
 }
 
-export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
+type RuleDialogProps = {
+  buckets: Array<{ id: string; name: string }>
+  onCreated: () => void
+  onDeleted: () => void
+}
+
+export function RuleDialog({ buckets, onCreated, onDeleted }: RuleDialogProps) {
   const qc = useQueryClient()
-  const { data: buckets } = useQuery({
-    queryKey: ['buckets'],
-    queryFn: fetchBuckets,
-  })
   const { data: rules } = useQuery<Rule[]>({
     queryKey: ['rules'],
     queryFn: fetchRules,
@@ -47,7 +49,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
   >('FROM_DOMAIN')
   const [pattern, setPattern] = useState('')
   const [isHighPriority, setIsHighPriority] = useState(false)
-  const [open, setOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(false)
 
   const createMutation = useMutation({
     mutationFn: () => createRule({ bucketId, type, pattern, isHighPriority }),
@@ -56,7 +58,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
       setIsHighPriority(false)
       qc.invalidateQueries({ queryKey: ['rules'] })
       toast.success('Rule created successfully.')
-      onCreated?.()
+      onCreated()
     },
   })
 
@@ -65,12 +67,12 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['rules'] })
       toast.success('Rule deleted successfully.')
-      onCreated?.()
+      onDeleted()
     },
   })
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
         <Button variant="outline">Manage Rules</Button>
       </DialogTrigger>
@@ -149,7 +151,7 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
         </div>
 
         <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={() => setOpen(false)}>
+          <Button variant="ghost" onClick={() => setIsOpen(false)}>
             Cancel
           </Button>
           <Button
@@ -174,30 +176,30 @@ export function RuleDialog({ onCreated }: { onCreated?: () => void }) {
             </p>
           )}
           <div className="space-y-2">
-            {rules?.map((rule) => (
+            {rules?.map((r) => (
               <div
-                key={rule.id}
+                key={r.id}
                 className="flex items-center justify-between text-sm p-2 rounded-md bg-muted/50"
               >
                 <div>
-                  {rule.priority === 1 && (
+                  {r.priority === 1 && (
                     <span className="font-bold text-yellow-500 mr-2">
                       [High Priority]
                     </span>
                   )}
                   <span className="font-mono bg-white/50 px-1 py-0.5 rounded text-xs">
-                    {rule.type}
+                    {r.type}
                   </span>
-                  :<span className="font-semibold ml-1">{rule.pattern}</span> →{' '}
-                  <span className="font-semibold">{rule.bucket.name}</span>
+                  :<span className="font-semibold ml-1">{r.pattern}</span> →{' '}
+                  <span className="font-semibold">{r.bucket.name}</span>
                 </div>
                 <Button
                   size="icon"
                   variant="ghost"
-                  className="h-6 w-6"
-                  onClick={() => deleteMutation.mutate(rule.id)}
+                  onClick={() => deleteMutation.mutate(r.id)}
+                  disabled={deleteMutation.isPending}
                 >
-                  <X className="h-4 w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
             ))}

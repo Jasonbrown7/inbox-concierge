@@ -36,8 +36,8 @@ The application employs a hybrid approach to data management to ensure a fast us
 On initial load, the application automatically syncs the user's latest email metadata from Gmail. Immediately following the sync, a multi-stage classification pipeline runs on the backend:
 
 1.  **Heuristics:** Fast, deterministic checks identify common email types like newsletters and transactional messages.
-2.  **LLM Classification:** Any remaining uncategorized emails are sent in batches to a Large Language Model (e.g., GPT-4o-mini) for nuanced classification into buckets like "Important" or "Can wait".
-3.  **Rules Engine:** After classification, a "rules override" pass is performed. This pass applies any user-created rules. Rule priority is handled automatically based on the importance of the target bucket (e.g., "Important" rules run before "Newsletter" rules), with a manual "high-priority" option available for resolving conflicts. This ensures user preferences are the final word. This entire process is triggered on load and can be manually re-run by the user.
+2.  **LLM Classification:** Any remaining uncategorized emails are sent in batches to a Large Language Model (e.g., GPT-4o-mini). The LLM is dynamically provided with the user's complete set of buckets—including any custom ones they've created, allowing for nuanced classification into categories like "Important," "Can wait," or user-defined buckets like "Finance"
+3.  **Rules Engine:** After classification, a "rules override" pass is performed. This pass applies any user-created rules. Rule priority is handled automatically based on the importance of the target bucket (e.g., "Important" rules run before "Newsletter" rules), with a manual "high-priority" option available for resolving conflicts. This ensures user preferences are the final word. The entire process is triggered on load and can be manually re-run by the user.
 
 ### Backend & Frontend Interaction
 

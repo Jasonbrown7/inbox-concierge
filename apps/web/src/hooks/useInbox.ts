@@ -1,23 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { fetchBuckets, fetchThreads, runClassify } from '@/lib/api'
 import { api } from '@/lib/axios'
-import { toast } from 'sonner'
 
-export function useInbox(activeTab: string) {
+export function useInbox() {
   const qc = useQueryClient()
 
   // Data fetching
   const bucketsQuery = useQuery({
     queryKey: ['buckets'],
     queryFn: fetchBuckets,
-  })
-
-  const threadsQuery = useQuery({
-    queryKey: ['threads', activeTab],
-    queryFn: () =>
-      activeTab === 'All'
-        ? fetchThreads()
-        : fetchThreads({ bucket: activeTab }),
   })
 
   const allThreadsQuery = useQuery({
@@ -27,42 +18,35 @@ export function useInbox(activeTab: string) {
 
   // Mutations
   const classifyMutation = useMutation({
-    mutationFn: () => runClassify(200),
-    onSuccess: (data) => {
+    mutationFn: (variables?: { force?: boolean }) =>
+      runClassify(200, variables?.force),
+    onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['threads'] })
-      toast.success('Inbox classified', {
-        description: `Processed ${data.totalUncategorized} new threads.`,
-      })
+      // Toasts are handled in the component with toast.promise
     },
-    onError: () => {
-      toast.error('Classification failed', {
-        description: 'Something went wrong while classifying your inbox.',
-      })
+    onError: (error) => {
+      console.error('Classification failed:', error)
+      // Toasts are handled in the component with toast.promise
     },
   })
 
   const syncMutation = useMutation({
     mutationFn: () => api.post('/threads/sync'),
-    onSuccess: (data) => {
-      console.log('Sync complete, now classifying.', data)
-      toast.info('Sync complete, now classifying...')
-      classifyMutation.mutate()
+    onSuccess: () => {
+      // The component orchestrates the sync to classify flow
     },
     onError: (error) => {
       console.error('Sync failed:', error)
-      toast.error('Sync failed', {
-        description: 'Could not sync with your Gmail account.',
-      })
     },
   })
 
   return {
     bucketsQuery,
-    threadsQuery,
     allThreadsQuery,
     classifyMutation,
     syncMutation,
     invalidateRules: () => qc.invalidateQueries({ queryKey: ['rules'] }),
     invalidateThreads: () => qc.invalidateQueries({ queryKey: ['threads'] }),
+    invalidateBuckets: () => qc.invalidateQueries({ queryKey: ['buckets'] }),
   }
 }

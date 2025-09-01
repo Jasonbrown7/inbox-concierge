@@ -39,7 +39,7 @@ The application uses an `AuthHandler` in `App.tsx` which acts as a gatekeeper. I
 
 ### Data Fetching & UI Logic
 
-- **Logic Encapsulation**: The `InboxPage`'s complex logic is encapsulated in the `useInbox` custom hook. This hook handles all data fetching (for buckets and threads), mutations (for syncing and classifying), and returns the necessary data and state to the component.
-- **Initial Load**: On the initial load of the `InboxPage`, the application automatically triggers a sync with the Gmail API, followed immediately by the classification pipeline.
-- **UI**: The page uses a tabbed interface to filter threads by their assigned bucket. A "Reclassify" button allows the user to re-run the classification process, and an "Add rule" button opens a dialog for managing classification rules.
+- **Logic Encapsulation**: The `InboxPage`'s complex logic is orchestrated by the component itself, using a custom `useInbox` hook to manage the underlying server state. This hook provides all the necessary data-fetching queries and mutations.
+- **Initial Load & Syncing**: On the initial load of the `InboxPage`, the application automatically triggers a sync with the Gmail API, followed immediately by the classification pipeline. A prominent "Sync" button allows the user to manually trigger this process again at any time. The UI provides clear, persistent toast notifications to show the status of this pipeline.
+- **UI**: The page uses a tabbed interface to filter threads by their assigned bucket. Dialogs for "Manage Rules" and "Manage Buckets" allow users to create and delete their own custom buckets and rules. Creating a new item triggers a complete re-classification of all recent mail, while deleting an item triggers a faster, targeted re-classification of only the affected threads.
 - **Thread View**: When a user clicks on a thread, they are navigated to `/thread/:id`. The `ThreadPage.tsx` component then makes an on-demand request to `GET /api/threads/:id` to fetch the full content for that specific thread.

@@ -6,8 +6,20 @@ export async function fetchBuckets() {
     id: string
     name: string
     slug: string
-    color?: string
+    isDefault: boolean
   }>
+}
+
+export async function createBucket(payload: {
+  name: string
+  description?: string
+}) {
+  const { data } = await api.post('/buckets', payload)
+  return data
+}
+
+export async function deleteBucket(id: string) {
+  await api.delete(`/buckets/${id}`)
 }
 
 export async function fetchRules() {
@@ -33,8 +45,13 @@ export async function deleteRule(id: string) {
   await api.delete(`/rules/${id}`)
 }
 
-export async function runClassify(n?: number) {
-  const { data } = await api.post(`/classify/run${n ? `?n=${n}` : ''}`)
+export async function runClassify(n?: number, force?: boolean) {
+  const params = new URLSearchParams()
+  if (n) params.set('n', String(n))
+  if (force) params.set('force', 'true')
+  const qs = params.toString() ? `?${params.toString()}` : ''
+
+  const { data } = await api.post(`/classify/run${qs}`)
   return data
 }
 

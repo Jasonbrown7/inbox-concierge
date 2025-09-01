@@ -24,15 +24,16 @@ const createMockThreadForRule = (data: Partial<Thread>): Thread => ({
 const createMockRule = (
   data: Partial<Rule> & { bucket: Partial<Bucket> }
 ): Rule & { bucket: Bucket } => {
-  const mockBucket = {
+  const mockBucket: Bucket = {
     id: 'bucket1',
     userId: 'user1',
     name: 'Test Bucket',
     slug: 'test-bucket',
+    description: null,
     isDefault: false,
-    color: null,
     sortOrder: 0,
     createdAt: new Date(),
+    updatedAt: new Date(),
     ...data.bucket,
   }
 

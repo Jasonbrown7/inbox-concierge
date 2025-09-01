@@ -33,16 +33,18 @@ model User {
 }
 
 model Bucket {
-  id         String   @id @default(cuid())
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  name       String
-  slug       String
-  isDefault  Boolean  @default(false)
-  color      String?
-  sortOrder  Int?     @default(0)
-  createdAt  DateTime @default(now())
-  rules      Rule[]
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  name        String
+  slug        String
+  description String?
+  isDefault   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  rules       Rule[]
+
   // index for quick lookups
   @@index([userId, slug])
   @@unique([userId, slug])

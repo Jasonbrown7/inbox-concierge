@@ -54,7 +54,23 @@ export async function ensureDefaultBuckets(userId: string) {
  * 1. Classifies ONLY uncategorized threads via heuristics & LLM.
  * 2. Applies a "rules override" pass to ALL recent threads to ensure user rules are the final word.
  */
-export async function classifyLastN(userId: string, n = 200) {
+export async function classifyLastN(userId: string, n = 200, force?: boolean) {
+  if (force) {
+    const recentThreads = await prisma.thread.findMany({
+      where: { userId },
+      orderBy: { internalDate: 'desc' },
+      take: n,
+      select: { id: true },
+    })
+    const ids = recentThreads.map((t) => t.id)
+    await prisma.thread.updateMany({
+      where: { id: { in: ids } },
+      data: { bucket: 'uncategorized' },
+    })
+  }
+
+  const buckets = await ensureDefaultBuckets(userId)
+
   // Classify uncategorized threads
   const rules = (await prisma.rule.findMany({
     where: { userId },
@@ -72,21 +88,24 @@ export async function classifyLastN(userId: string, n = 200) {
 
   let classifiedByHeuristic = 0
   const llmTargets: Thread[] = []
+  const updates = []
 
   if (uncategorizedThreads.length > 0) {
     // Heuristics on uncategorized
     for (const t of uncategorizedThreads) {
       const h = applyHeuristics(t)
       if (h) {
-        await prisma.thread.update({
-          where: { id: t.id },
-          data: {
-            bucket: h.bucket,
-            classificationSource: 'heuristic',
-            classificationReason: h.reason,
-            classifiedAt: new Date(),
-          },
-        })
+        updates.push(
+          prisma.thread.update({
+            where: { id: t.id },
+            data: {
+              bucket: h.bucket,
+              classificationSource: 'heuristic',
+              classificationReason: h.reason,
+              classifiedAt: new Date(),
+            },
+          })
+        )
         classifiedByHeuristic++
       } else {
         llmTargets.push(t)
@@ -97,7 +116,7 @@ export async function classifyLastN(userId: string, n = 200) {
     if (llmTargets.length > 0) {
       const batches = chunk(llmTargets, LLM_BATCH_SIZE)
       const llmResults = await Promise.all(
-        batches.map((b) => limit(() => classifyWithLlm(b)))
+        batches.map((b) => limit(() => classifyWithLlm(b, buckets)))
       )
       const llmTargetIds = new Set(llmTargets.map((t) => t.id))
 
@@ -109,8 +128,8 @@ export async function classifyLastN(userId: string, n = 200) {
             )
             continue
           }
-          try {
-            await prisma.thread.update({
+          updates.push(
+            prisma.thread.update({
               where: { id: item.threadId },
               data: {
                 bucket: item.bucket,
@@ -119,16 +138,14 @@ export async function classifyLastN(userId: string, n = 200) {
                 classifiedAt: new Date(),
               },
             })
-          } catch (error) {
-            console.error(
-              `Failed to update thread ${item.threadId} from LLM classification.`,
-              error
-            )
-          }
+          )
         }
       }
     }
   }
+
+  // Run all classification updates from heuristics + LLM
+  await prisma.$transaction(updates)
 
   // Apply Rules as override on ALL threads
   const allRecentThreads = await prisma.thread.findMany({
@@ -138,6 +155,7 @@ export async function classifyLastN(userId: string, n = 200) {
   })
 
   let classifiedByRule = 0
+  const ruleUpdates = []
   for (const t of allRecentThreads) {
     const r = applyRules(t, rules)
     if (r) {
@@ -145,20 +163,23 @@ export async function classifyLastN(userId: string, n = 200) {
         ?.bucket?.name
       // Only update if the rule's bucket is different from the thread's current bucket
       if (ruleBucket && t.bucket !== ruleBucket) {
-        await prisma.thread.update({
-          where: { id: t.id },
-          data: {
-            bucket: ruleBucket,
-            classificationSource: 'rule',
-            classificationReason: r.reason,
-            classifiedAt: new Date(),
-          },
-        })
+        ruleUpdates.push(
+          prisma.thread.update({
+            where: { id: t.id },
+            data: {
+              bucket: ruleBucket,
+              classificationSource: 'rule',
+              classificationReason: r.reason,
+              classifiedAt: new Date(),
+            },
+          })
+        )
       }
       // Count all rule matches
       classifiedByRule++
     }
   }
+  await prisma.$transaction(ruleUpdates)
 
   return {
     totalUncategorized: uncategorizedThreads.length,

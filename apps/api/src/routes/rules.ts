@@ -66,8 +66,39 @@ rulesRouter.post('/', isAuthenticated, async (req, res) => {
 })
 
 rulesRouter.delete('/:id', isAuthenticated, async (req, res) => {
-  await prisma.rule.delete({
-    where: { id: req.params.id, userId: req.user!.id },
+  const { id } = req.params
+  const userId = req.user!.id
+
+  const rule = await prisma.rule.findFirst({
+    where: { id, userId },
   })
+
+  if (!rule) {
+    return res.status(404).json({ message: 'Rule not found' })
+  }
+
+  // Construct the reason string to find threads classified by this specific rule
+  const reason = `Matched ${rule.type}:${rule.pattern}`
+
+  await prisma.$transaction([
+    // Reset threads that were classified by this rule
+    prisma.thread.updateMany({
+      where: {
+        userId,
+        classificationSource: 'rule',
+        classificationReason: reason,
+      },
+      data: {
+        bucket: 'uncategorized',
+        classificationSource: null,
+        classificationReason: null,
+      },
+    }),
+    // Delete the rule
+    prisma.rule.delete({
+      where: { id },
+    }),
+  ])
+
   res.status(204).end()
 })
