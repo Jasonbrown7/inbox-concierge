@@ -65,6 +65,16 @@ pnpm dev
 
 The frontend will be available at `http://localhost:5173` and the API server at `http://localhost:4000`.
 
+### 5. Running Tests
+
+You can run the unit tests with the following command.
+
+**Backend (API):**
+
+```sh
+pnpm --filter @inbox-concierge/api test
+```
+
 ## Core Design & Data Flow
 
 ### Authentication
