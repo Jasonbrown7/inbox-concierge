@@ -7,6 +7,8 @@ import { useInbox } from '@/hooks/useInbox'
 import { ThreadList } from '@/components/ThreadList'
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { toast } from 'sonner'
+import { useMutation } from '@tanstack/react-query'
+import { logout } from '@/lib/api'
 
 type SyncStep = 'idle' | 'syncing' | 'classifying'
 
@@ -24,6 +26,13 @@ export function InboxPage() {
     invalidateThreads,
     invalidateBuckets,
   } = useInbox()
+
+  const logoutMutation = useMutation({
+    mutationFn: logout,
+    onSuccess: () => {
+      window.location.reload()
+    },
+  })
 
   const { data: buckets } = bucketsQuery
   const { data: allThreads, isLoading } = allThreadsQuery
@@ -113,7 +122,14 @@ export function InboxPage() {
         <h1 className="text-xl sm:text-2xl font-bold tracking-tight">
           TENEX Inbox Concierge
         </h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          <Button
+            variant="link"
+            className="text-neutral-500"
+            onClick={() => logoutMutation.mutate()}
+          >
+            Logout
+          </Button>
           <RuleDialog
             buckets={buckets || []}
             onCreated={handleRuleCreated}

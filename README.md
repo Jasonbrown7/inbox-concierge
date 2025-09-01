@@ -11,6 +11,50 @@ The monorepo contains two primary applications:
 - `apps/api`: A Node.js/Express backend that handles business logic, data persistence, and communication with the Google Gmail API.
 - `apps/web`: A React/Vite frontend that provides the user interface.
 
+## Documentation
+
+- **[Backend Documentation](./apps/api/README.md)**
+- **[Frontend Documentation](./apps/web/README.md)**
+
+## Getting Started: Running Locally
+
+### Prerequisites
+
+- Node.js (v18 or higher recommended)
+- `pnpm` package manager (can be installed with `npm install -g pnpm`)
+
+### 1. Installation
+
+Clone the repository and install the dependencies:
+
+```sh
+git clone <repository-url>
+cd inbox-concierge
+pnpm install
+```
+
+### 2. Environment Setup
+
+This project requires an `.env` file in the `apps/api` directory for credentials. For the purpose of this review, this file has been shared separately. Please place it in the correct directory (./apps/api)
+
+### 3. Database Setup
+
+Set up the SQLite database and apply the latest schema:
+
+```sh
+pnpm --filter @inbox-concierge/api run prisma:dev
+```
+
+### 4. Run the Application
+
+Run both the frontend and backend servers concurrently. From both "./apps/api" and "./apps/web" run:
+
+```sh
+pnpm dev
+```
+
+The frontend will be available at `http://localhost:5173` and the API server at `http://localhost:4000`.
+
 ## Core Design & Data Flow
 
 ### Authentication

@@ -45,6 +45,10 @@ export async function deleteRule(id: string) {
   await api.delete(`/rules/${id}`)
 }
 
+export async function logout() {
+  await api.post('/auth/logout')
+}
+
 export async function runClassify(n?: number, force?: boolean) {
   const params = new URLSearchParams()
   if (n) params.set('n', String(n))
