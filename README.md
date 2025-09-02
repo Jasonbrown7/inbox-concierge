@@ -38,7 +38,7 @@ The monorepo contains two primary applications:
 Clone the repository and install the dependencies:
 
 ```sh
-git clone <repository-url>
+git clone git@github.com:Jasonbrown7/inbox-concierge.git
 cd inbox-concierge
 pnpm install
 ```
